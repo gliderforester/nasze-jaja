@@ -179,7 +179,8 @@
     body {
       font-family: Arial, sans-serif;
       color: #333;
-      background-color: #f8fafc;
+      /* Bardzo jasne tło dla lepszej czytelności */
+      background-color: #fdfdfd;
     }
     /* Własne dopasowania do Bootstrapa */
     #message {
@@ -200,31 +201,49 @@
 
     /* Pasek nagłówka */
     #header-bar {
-      background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
-      color: white;
+      /* Jasny gradient zamiast ciemnego banera */
+      background: linear-gradient(90deg, #d0e7ff 0%, #f3f9ff 100%);
+      color: #333;
       border-radius: 0.25rem;
+    }
+
+    /* Klasy dla większych etykiet i pól formularza */
+    .big-label {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .big-control {
+      font-size: 1.4rem;
+      padding: 1rem;
+      height: auto;
+    }
+
+    /* Bardzo duży przycisk zapisu */
+    .btn-very-large {
+      font-size: 1.3rem;
+      padding: 1rem 1.5rem;
     }
   </style>
 </head>
 <body class="container my-4">
-  <!-- Baner z motywem kurzym -->
-  <img src="chicken_banner.png" alt="Motyw kurzy" class="img-fluid mb-3 rounded banner-img">
+  <!-- Pasek nagłówka z jasnym tłem i wyśrodkowanym tytułem -->
   <div id="header-bar" class="py-3 px-4 mb-4">
-    <h1 class="text-center m-0">Rejestr jajek – Monika i Artur (edycja)</h1>
+    <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
   </div>
   <form id="eggForm" class="mb-4">
-    <div class="mb-3">
-      <label for="user" class="form-label">Osoba:</label>
-      <select id="user" class="form-select form-select-lg" required>
+    <div class="mb-4">
+      <label for="user" class="form-label big-label">Osoba:</label>
+      <select id="user" class="form-select big-control" required>
         <option value="Monika">Monika</option>
         <option value="Artur">Artur</option>
       </select>
     </div>
-    <div class="mb-3">
-      <label for="eggs" class="form-label">Liczba zebranych jaj:</label>
-      <input type="number" id="eggs" class="form-control form-control-lg" min="0" required />
+    <div class="mb-5">
+      <label for="eggs" class="form-label big-label">Liczba zebranych jaj:</label>
+      <input type="number" id="eggs" class="form-control big-control" min="0" required />
     </div>
-    <button type="submit" class="btn btn-primary btn-lg">Zapisz</button>
+    <button type="submit" class="btn btn-primary btn-very-large">Zapisz</button>
     <div id="message" class="text-success mt-2"></div>
   </form>
   <h2>Wprowadzone wpisy</h2>
