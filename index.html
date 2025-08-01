@@ -63,6 +63,13 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
+    // Zwraca nazwę dnia tygodnia w języku polskim dla podanej daty w formacie YYYY-MM-DD
+    function getDayName(dateStr) {
+      const days = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+      const date = new Date(dateStr);
+      return days[date.getDay()];
+    }
+
     async function saveEntry(user, eggs) {
       const now = new Date();
       const entry = {
@@ -82,7 +89,7 @@
         entriesById[entry.id] = entry;
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${entry.date}</td>
+          <td>${getDayName(entry.date)}</td>
           <td>${entry.user}</td>
           <td>${entry.eggs}</td>
           <td>
@@ -172,6 +179,7 @@
     body {
       font-family: Arial, sans-serif;
       color: #333;
+      background-color: #f8fafc;
     }
     /* Własne dopasowania do Bootstrapa */
     #message {
@@ -179,11 +187,21 @@
     }
     #totals-card {
       border: 1px solid #ddd;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Pasek nagłówka */
+    #header-bar {
+      background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+      color: white;
+      border-radius: 0.25rem;
     }
   </style>
 </head>
 <body class="container my-4">
-  <h1 class="text-center mb-4">Rejestr jajek – Monika i Artur (edycja)</h1>
+  <div id="header-bar" class="py-3 px-4 mb-4">
+    <h1 class="text-center m-0">Rejestr jajek – Monika i Artur (edycja)</h1>
+  </div>
   <form id="eggForm" class="mb-4">
     <div class="mb-3">
       <label for="user" class="form-label">Osoba:</label>
@@ -203,7 +221,7 @@
   <table class="table table-striped">
     <thead>
       <tr>
-        <th>Data</th>
+        <th>Dzień</th>
         <th>Osoba</th>
         <th>Liczba jaj</th>
         <th>Akcje</th>
