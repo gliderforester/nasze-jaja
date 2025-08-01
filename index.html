@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Monika & Artur – Rejestr jaj (edycja)</title>
+  <!-- Bootstrap CSS for a nowoczesny wygląd -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    integrity="sha384-9ndCyUa1zKpHu+FA1lYCFb/oG6s7nU30ncoigkNDJ9vqWwEQfFGRC3qmRRY7W+Jd"
+    crossorigin="anonymous"
+  />
   <!-- Ładowanie modułów Firebase z CDN (wersja 9) -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
@@ -79,8 +86,8 @@
           <td>${entry.user}</td>
           <td>${entry.eggs}</td>
           <td>
-            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn">Edytuj</button>
-            <button data-id="${entry.id}" class="delete-btn">Usuń</button>
+            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn btn btn-sm btn-outline-primary me-1">Edytuj</button>
+            <button data-id="${entry.id}" class="delete-btn btn btn-sm btn-outline-danger">Usuń</button>
           </td>`;
         tableBody.appendChild(row);
         // Sumowanie tygodniowe
@@ -164,64 +171,36 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
       color: #333;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
+    /* Własne dopasowania do Bootstrapa */
     #message {
-      color: green;
+      margin-top: 5px;
     }
-    #totals {
-      background-color: #f9f9f9;
-      padding: 10px;
+    #totals-card {
       border: 1px solid #ddd;
-    }
-    .edit-btn, .delete-btn {
-      margin: 0 3px;
-      padding: 4px 8px;
-      font-size: 0.8em;
     }
   </style>
 </head>
-<body>
-  <h1>Rejestr jajek – Monika i Artur (edycja)</h1>
-  <form id="eggForm">
-    <label for="user">Osoba:</label>
-    <select id="user" required>
-      <option value="Monika">Monika</option>
-      <option value="Artur">Artur</option>
-    </select>
-    <label for="eggs">Liczba zebranych jaj:</label>
-    <input type="number" id="eggs" min="0" required />
-    <button type="submit">Zapisz</button>
-    <div id="message"></div>
+<body class="container my-4">
+  <h1 class="text-center mb-4">Rejestr jajek – Monika i Artur (edycja)</h1>
+  <form id="eggForm" class="mb-4">
+    <div class="mb-3">
+      <label for="user" class="form-label">Osoba:</label>
+      <select id="user" class="form-select" required>
+        <option value="Monika">Monika</option>
+        <option value="Artur">Artur</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="eggs" class="form-label">Liczba zebranych jaj:</label>
+      <input type="number" id="eggs" class="form-control" min="0" required />
+    </div>
+    <button type="submit" class="btn btn-primary">Zapisz</button>
+    <div id="message" class="text-success mt-2"></div>
   </form>
   <h2>Wprowadzone wpisy</h2>
-  <table>
+  <table class="table table-striped">
     <thead>
       <tr>
         <th>Data</th>
@@ -234,7 +213,10 @@
       <!-- Wiersze będą generowane dynamicznie -->
     </tbody>
   </table>
-  <div id="totals"></div>
-  <p style="font-size: 0.9em; color: #666;">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
+  <!-- Sekcja z podsumowaniem opakowana w kartę -->
+  <div id="totals-card" class="card mb-3">
+    <div class="card-body" id="totals"></div>
+  </div>
+  <p class="text-muted" style="font-size: 0.9em;">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
 </body>
 </html>
