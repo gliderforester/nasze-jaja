@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monika & Artur – jaja</title>
+  <title>Monika & Artur – Rejestr jaj (edycja)</title>
   <!-- Bootstrap CSS for a nowoczesny wygląd -->
   <link
     rel="stylesheet"
@@ -93,8 +93,8 @@
           <td>${entry.user}</td>
           <td>${entry.eggs}</td>
           <td>
-            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn btn btn-sm btn-outline-primary me-1">Edytuj</button>
-            <button data-id="${entry.id}" class="delete-btn btn btn-sm btn-outline-danger">Usuń</button>
+            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn btn btn-outline-primary me-2">Edytuj</button>
+            <button data-id="${entry.id}" class="delete-btn btn btn-outline-danger">Usuń</button>
           </td>`;
         tableBody.appendChild(row);
         // Sumowanie tygodniowe
@@ -190,6 +190,14 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
+    /* Zwiększenie czytelności na telefonie */
+    table.table {
+      font-size: 1.1rem;
+    }
+    .table th, .table td {
+      padding: 0.75rem;
+    }
+
     /* Pasek nagłówka */
     #header-bar {
       background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
@@ -199,22 +207,24 @@
   </style>
 </head>
 <body class="container my-4">
+  <!-- Baner z motywem kurzym -->
+  <img src="chicken_banner.png" alt="Motyw kurzy" class="img-fluid mb-3 rounded">
   <div id="header-bar" class="py-3 px-4 mb-4">
     <h1 class="text-center m-0">Rejestr jajek – Monika i Artur (edycja)</h1>
   </div>
   <form id="eggForm" class="mb-4">
     <div class="mb-3">
       <label for="user" class="form-label">Osoba:</label>
-      <select id="user" class="form-select" required>
+      <select id="user" class="form-select form-select-lg" required>
         <option value="Monika">Monika</option>
         <option value="Artur">Artur</option>
       </select>
     </div>
     <div class="mb-3">
       <label for="eggs" class="form-label">Liczba zebranych jaj:</label>
-      <input type="number" id="eggs" class="form-control" min="0" required />
+      <input type="number" id="eggs" class="form-control form-control-lg" min="0" required />
     </div>
-    <button type="submit" class="btn btn-primary">Zapisz</button>
+    <button type="submit" class="btn btn-primary btn-lg">Zapisz</button>
     <div id="message" class="text-success mt-2"></div>
   </form>
   <h2>Wprowadzone wpisy</h2>
