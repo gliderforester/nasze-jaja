@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monika & Artur – Rejestr jaj (edycja)</title>
+  <!-- Ładowanie modułów Firebase z CDN (wersja 9) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import {
+      getDatabase,
+      ref,
+      push,
+      onValue,
+      update,
+      remove
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+
+    // Konfiguracja Firebase (Twoje dane z konsoli)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAItihAw7npW0lxkoNysM49xzeOXpGAzdg",
+      authDomain: "nasze-jaja-100.firebaseapp.com",
+      databaseURL: "https://nasze-jaja-100-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "nasze-jaja-100",
+      storageBucket: "nasze-jaja-100.firebasestorage.app",
+      messagingSenderId: "695477910328",
+      appId: "1:695477910328:web:ceb854c3dc147084aa9fcd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Elementy DOM
+    const form = document.querySelector('#eggForm');
+    const userSelect = document.querySelector('#user');
+    const eggInput = document.querySelector('#eggs');
+    const messageDiv = document.querySelector('#message');
+    const tableBody = document.querySelector('#entriesBody');
+    const totalsDiv = document.querySelector('#totals');
+
+    // Mapa id→wpis (do edycji)
+    let entriesById = {};
+
+    // Funkcje pomocnicze
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    }
+
+    function formatDate(date) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    async function saveEntry(user, eggs) {
+      const now = new Date();
+      const entry = {
+        user: user,
+        eggs: parseInt(eggs, 10),
+        timestamp: now.toISOString(),
+        date: formatDate(now)
+      };
+      await push(ref(db, 'entries'), entry);
+    }
+
+    function updateDisplay(entries) {
+      tableBody.innerHTML = '';
+      entriesById = {};
+      const weeklyTotals = {};
+      entries.forEach(entry => {
+        entriesById[entry.id] = entry;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${entry.date}</td>
+          <td>${entry.user}</td>
+          <td>${entry.eggs}</td>
+          <td>
+            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn">Edytuj</button>
+            <button data-id="${entry.id}" class="delete-btn">Usuń</button>
+          </td>`;
+        tableBody.appendChild(row);
+        // Sumowanie tygodniowe
+        const weekStart = formatDate(getWeekStart(entry.date));
+        if (!weeklyTotals[weekStart]) weeklyTotals[weekStart] = { Monika: 0, Artur: 0 };
+        weeklyTotals[weekStart][entry.user] += entry.eggs;
+      });
+      // Podsumowanie bieżącego tygodnia
+      const today = new Date();
+      const currentWeek = formatDate(getWeekStart(today));
+      const totals = weeklyTotals[currentWeek] || { Monika: 0, Artur: 0 };
+      const totalMonika = totals['Monika'] || 0;
+      const totalArtur = totals['Artur'] || 0;
+      let summaryHTML = `<p>Podsumowanie tygodniowe (${currentWeek} – ${formatDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())))}):</p>`;
+      summaryHTML += `<p>Monika zebrała ${totalMonika} jaj.</p>`;
+      summaryHTML += `<p>Artur zebrał ${totalArtur} jaj.</p>`;
+      const diff = totalMonika - totalArtur;
+      if (today.getDay() === 0) {
+        if (diff > 0) {
+          summaryHTML += `<p><strong>Bilans:</strong> Monika ma oddać ${diff / 2} jaj Arturowi, aby oboje mieli po ${totalMonika - diff / 2} jaj.</p>`;
+        } else if (diff < 0) {
+          summaryHTML += `<p><strong>Bilans:</strong> Artur ma oddać ${Math.abs(diff) / 2} jaj Monice, aby oboje mieli po ${totalArtur - Math.abs(diff) / 2} jaj.</p>`;
+        } else {
+          summaryHTML += `<p><strong>Bilans:</strong> Jesteście na zero. Nie trzeba nic wyrównywać.</p>`;
+        }
+      } else {
+        summaryHTML += `<p>Bilans zostanie obliczony w niedzielę wieczorem.</p>`;
+      }
+      totalsDiv.innerHTML = summaryHTML;
+    }
+
+    // Nasłuchuj zmiany w bazie
+    onValue(ref(db, 'entries'), snapshot => {
+      const data = snapshot.val() || {};
+      const entries = [];
+      for (const key in data) {
+        entries.push({ id: key, ...data[key] });
+      }
+      entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      updateDisplay(entries);
+    });
+
+    // Obsługa wysyłania formularza
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const user = userSelect.value;
+      const eggs = eggInput.value;
+      if (!eggs) {
+        messageDiv.textContent = 'Proszę podać liczbę jaj.';
+        return;
+      }
+      await saveEntry(user, eggs);
+      messageDiv.textContent = 'Wpis został zapisany!';
+      eggInput.value = '';
+    });
+
+    // Delegacja zdarzeń dla przycisków edycji i usuwania
+    tableBody.addEventListener('click', async e => {
+      const target = e.target;
+      const id = target.dataset.id;
+      if (!id) return;
+      if (target.classList.contains('delete-btn')) {
+        const confirmDel = confirm('Czy na pewno chcesz usunąć ten wpis?');
+        if (confirmDel) {
+          await remove(ref(db, `entries/${id}`));
+        }
+      } else if (target.classList.contains('edit-btn')) {
+        const entry = entriesById[id];
+        if (!entry) return;
+        const newEggsStr = prompt('Podaj nową liczbę jaj:', entry.eggs);
+        if (newEggsStr === null) return;
+        const newEggs = parseInt(newEggsStr, 10);
+        if (isNaN(newEggs)) {
+          alert('Wpisz poprawną liczbę');
+          return;
+        }
+        await update(ref(db, `entries/${id}`), { eggs: newEggs });
+      }
+    });
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    #message {
+      color: green;
+    }
+    #totals {
+      background-color: #f9f9f9;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    .edit-btn, .delete-btn {
+      margin: 0 3px;
+      padding: 4px 8px;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rejestr jajek – Monika i Artur (edycja)</h1>
+  <form id="eggForm">
+    <label for="user">Osoba:</label>
+    <select id="user" required>
+      <option value="Monika">Monika</option>
+      <option value="Artur">Artur</option>
+    </select>
+    <label for="eggs">Liczba zebranych jaj:</label>
+    <input type="number" id="eggs" min="0" required />
+    <button type="submit">Zapisz</button>
+    <div id="message"></div>
+  </form>
+  <h2>Wprowadzone wpisy</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Osoba</th>
+        <th>Liczba jaj</th>
+        <th>Akcje</th>
+      </tr>
+    </thead>
+    <tbody id="entriesBody">
+      <!-- Wiersze będą generowane dynamicznie -->
+    </tbody>
+  </table>
+  <div id="totals"></div>
+  <p style="font-size: 0.9em; color: #666;">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
+</body>
+</html>
