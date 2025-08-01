@@ -175,6 +175,17 @@
         await update(ref(db, `entries/${id}`), { eggs: newEggs });
       }
     });
+
+    // Obsługa przycisku resetu – usuwa wszystkie wpisy z bazy
+    const resetButton = document.querySelector('#resetButton');
+    if (resetButton) {
+      resetButton.addEventListener('click', async () => {
+        const confirmReset = confirm('Czy na pewno chcesz usunąć wszystkie wpisy?');
+        if (confirmReset) {
+          await remove(ref(db, 'entries'));
+        }
+      });
+    }
   </script>
   <style>
     body {
@@ -280,6 +291,10 @@
   <!-- Sekcja z podsumowaniem opakowana w kartę -->
   <div id="totals-card" class="card mb-3">
     <div class="card-body" id="totals"></div>
+  </div>
+  <!-- Przycisk do resetu danych -->
+  <div class="mb-4">
+    <button type="button" id="resetButton" class="btn btn-danger">Resetuj tydzień</button>
   </div>
   <p class="text-muted small-note">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
 </body>
