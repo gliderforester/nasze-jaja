@@ -109,8 +109,8 @@
       const totalMonika = totals['Monika'] || 0;
       const totalArtur = totals['Artur'] || 0;
       let summaryHTML = `<p>Podsumowanie tygodniowe (${currentWeek} – ${formatDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())))}):</p>`;
-      summaryHTML += `<p>Monika zebrała ${totalMonika} jaj.</p>`;
-      summaryHTML += `<p>Artur zebrał ${totalArtur} jaj.</p>`;
+      summaryHTML += `<p>Monika zebrała <strong>${totalMonika}</strong> jaj.</p>`;
+      summaryHTML += `<p>Artur zebrał <strong>${totalArtur}</strong> jaj.</p>`;
       const diff = totalMonika - totalArtur;
       if (today.getDay() === 0) {
         if (diff > 0) {
@@ -121,7 +121,8 @@
           summaryHTML += `<p><strong>Bilans:</strong> Jesteście na zero. Nie trzeba nic wyrównywać.</p>`;
         }
       } else {
-        summaryHTML += `<p>Bilans zostanie obliczony w niedzielę wieczorem.</p>`;
+        // Komunikat o bilansie w niedzielę – na czerwono
+        summaryHTML += `<p class="text-danger">Bilans zostanie obliczony w niedzielę wieczorem.</p>`;
       }
       totalsDiv.innerHTML = summaryHTML;
     }
@@ -179,8 +180,13 @@
     body {
       font-family: Arial, sans-serif;
       color: #333;
-      /* Bardzo jasne tło dla lepszej czytelności */
-      background-color: #fdfdfd;
+      /* Jasne tło oraz delikatny motyw w tle */
+      background-color: #fbfbfb;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+        url('chicken_banner.png');
+      background-repeat: repeat;
+      background-size: 250px 250px;
     }
     /* Własne dopasowania do Bootstrapa */
     #message {
@@ -201,33 +207,44 @@
 
     /* Pasek nagłówka */
     #header-bar {
-      /* Jasny gradient zamiast ciemnego banera */
-      background: linear-gradient(90deg, #d0e7ff 0%, #f3f9ff 100%);
+      /* Jasny gradient i ciemny tekst */
+      background: linear-gradient(90deg, #e8f0fe 0%, #fdfcff 100%);
       color: #333;
       border-radius: 0.25rem;
     }
 
-    /* Klasy dla większych etykiet i pól formularza */
+    /* większe etykiety dla lepszej czytelności */
     .big-label {
-      font-size: 1.4rem;
-      font-weight: bold;
+      font-size: 1.3rem;
+      font-weight: 600;
     }
 
+    /* większe kontrolki formularza */
     .big-control {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       padding: 1rem;
       height: auto;
     }
 
-    /* Bardzo duży przycisk zapisu */
+    /* bardzo duży przycisk zapisu */
     .btn-very-large {
-      font-size: 1.3rem;
-      padding: 1rem 1.5rem;
+      font-size: 1.2rem;
+      padding: 0.75rem 1.5rem;
+    }
+
+    /* pogrubienie kolumny z liczbą jaj */
+    .table td:nth-child(3) {
+      font-weight: bold;
+    }
+
+    /* mała czcionka dla notatki na dole */
+    .small-note {
+      font-size: 0.75em;
     }
   </style>
 </head>
 <body class="container my-4">
-  <!-- Pasek nagłówka z jasnym tłem i wyśrodkowanym tytułem -->
+  <!-- Pasek nagłówka z wyśrodkowanym tytułem -->
   <div id="header-bar" class="py-3 px-4 mb-4">
     <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
   </div>
@@ -264,6 +281,6 @@
   <div id="totals-card" class="card mb-3">
     <div class="card-body" id="totals"></div>
   </div>
-  <p class="text-muted" style="font-size: 0.9em;">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
+  <p class="text-muted small-note">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
 </body>
 </html>
