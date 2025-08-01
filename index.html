@@ -108,9 +108,22 @@
       const totals = weeklyTotals[currentWeek] || { Monika: 0, Artur: 0 };
       const totalMonika = totals['Monika'] || 0;
       const totalArtur = totals['Artur'] || 0;
+
+      // Oblicz sumę jaj dzisiaj (łącznie) i w tym tygodniu (łącznie)
+      let todayTotal = 0;
+      const todayStr = formatDate(today);
+      entries.forEach(ent => {
+        if (ent.date === todayStr) {
+          todayTotal += ent.eggs;
+        }
+      });
+      const weekTotal = totalMonika + totalArtur;
       let summaryHTML = `<p>Podsumowanie tygodniowe (${currentWeek} – ${formatDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())))}):</p>`;
       summaryHTML += `<p>Monika zebrała <strong>${totalMonika}</strong> jaj.</p>`;
       summaryHTML += `<p>Artur zebrał <strong>${totalArtur}</strong> jaj.</p>`;
+      // Dodatkowe informacje: dzisiaj i cały tydzień (łączna liczba jaj)
+      summaryHTML += `<p>Dzisiaj: <strong>${todayTotal}</strong> jaj.</p>`;
+      summaryHTML += `<p>W tym tygodniu: <strong>${weekTotal}</strong> jaj.</p>`;
       const diff = totalMonika - totalArtur;
       if (today.getDay() === 0) {
         if (diff > 0) {
