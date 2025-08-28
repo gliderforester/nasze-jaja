@@ -2,28 +2,133 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monika & Artur – Rejestr jaj (edycja)</title>
-  <!-- Bootstrap CSS for a nowoczesny wygląd -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    integrity="sha384-9ndCyUa1zKpHu+FA1lYCFb/oG6s7nU30ncoigkNDJ9vqWwEQfFGRC3qmRRY7W+Jd"
-    crossorigin="anonymous"
-  />
-  <!-- Ładowanie modułów Firebase z CDN (wersja 9) -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import {
-      getDatabase,
-      ref,
-      push,
-      onValue,
-      update,
-      remove
-    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monika & Artur – biznes jajowy</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    // Konfiguracja Firebase (Twoje dane z konsoli)
+  <style>
+    :root{ --card-shadow: 0 2px 6px rgba(0,0,0,.06); }
+    body{
+      font-family: Arial, sans-serif;
+      color:#222;
+      background-color:#fbfbfb;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+        url('chicken_banner.png');
+      background-repeat: repeat;
+      background-size: 250px 250px;
+    }
+    #header-bar{
+      background: linear-gradient(90deg, #eaf2ff, #ffffff);
+      color:#1f2d3d; border:1px solid #e5eefc; border-radius:.75rem; box-shadow: var(--card-shadow);
+    }
+    .big-label{ font-size:1.15rem; font-weight:700; }
+    .big-control{ font-size:1.15rem; padding:.9rem 1rem; height:auto; }
+    .btn-very-large{ font-size:1.2rem; padding:1rem 1.6rem; }
+    .quick-btn{ min-width:70px; }
+
+    /* Segmented (radio) */
+    .btn-check:focus + .btn, .btn:focus { box-shadow: 0 0 0 .2rem rgba(13,110,253,.15); }
+    .btn-segmented{ padding:.8rem 1.2rem; font-size:1.1rem; }
+    .btn-group>.btn:not(:last-child){ border-right-width:0; }
+    .btn-group .btn{ border-color:#b7cffd; }
+    .btn-outline-primary{ color:#0d6efd; border-color:#b7cffd; background:#fff; }
+    .btn-outline-primary:hover{ background:#f3f8ff; }
+    .btn-check:checked + .btn-outline-primary{
+      color:#fff; background:#0d6efd; border-color:#0d6efd;
+    }
+
+    /* tabela */
+    table.table{ font-size:1.08rem; background:#fff; }
+    .table td, .table th{ padding:.8rem .9rem; }
+    .table thead th{ background:#f2f5ff; border-bottom:2px solid #dee2e6; }
+    .table-bordered td, .table-bordered th{ border:1px solid #dee2e6; }
+    .table td:nth-child(3){ font-weight:700; }
+
+    #totals-card{ border:1px solid #e6e6e6; box-shadow: var(--card-shadow); }
+    .small-note{ font-size:.8em; }
+    .sticky-summary{ position:sticky; top:8px; z-index:1020; }
+
+    #flash-area{ position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 1100; }
+  </style>
+</head>
+<body class="container my-4">
+
+  <div id="header-bar" class="py-3 px-4 mb-4">
+    <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
+  </div>
+
+  <!-- Formularz -->
+  <form id="eggForm" class="mb-4" autocomplete="off">
+    <div class="mb-3">
+      <div class="d-flex align-items-center justify-content-between">
+        <label class="form-label big-label mb-2">Osoba</label>
+      </div>
+      <!-- Segmented radio -->
+      <div class="btn-group" role="group" aria-label="Wybór osoby">
+        <input type="radio" class="btn-check" name="person" id="personMonika" value="Monika" autocomplete="off">
+        <label class="btn btn-outline-primary btn-segmented" for="personMonika">Monika</label>
+
+        <input type="radio" class="btn-check" name="person" id="personArtur" value="Artur" autocomplete="off">
+        <label class="btn btn-outline-primary btn-segmented" for="personArtur">Artur</label>
+      </div>
+    </div>
+
+    <div class="mb-2 mt-3">
+      <label for="eggs" class="form-label big-label">Liczba zebranych jaj</label>
+      <input type="number" id="eggs" min="0" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control big-control" required />
+    </div>
+
+    <!-- szybkie przyciski -->
+    <div class="btn-group mb-4" role="group" aria-label="Szybkie dodawanie">
+      <button type="button" class="btn btn-outline-secondary quick-btn quick-add" data-add="1">+1</button>
+      <button type="button" class="btn btn-outline-secondary quick-btn quick-add" data-add="5">+5</button>
+      <button type="button" class="btn btn-outline-secondary quick-btn quick-add" data-add="10">+10</button>
+      <button type="button" class="btn btn-outline-secondary quick-btn" id="clear-eggs">Wyczyść</button>
+    </div>
+
+    <div class="d-grid d-sm-inline">
+      <button type="submit" class="btn btn-primary btn-very-large">Zapisz</button>
+    </div>
+  </form>
+
+  <!-- Podsumowanie (sticky) -->
+  <div id="totals-card" class="card mb-3 sticky-summary">
+    <div class="card-body" id="totals" aria-live="polite"></div>
+  </div>
+
+  <!-- Tabela wpisów -->
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered align-middle">
+      <thead>
+        <tr>
+          <th style="width:120px;">Dzień</th>
+          <th style="width:140px;">Osoba</th>
+          <th style="width:160px;">Liczba jaj</th>
+          <th>Akcje</th>
+        </tr>
+      </thead>
+      <tbody id="entriesTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Reset tygodnia (archiwizacja aktywnych wpisów) -->
+  <div class="mb-4">
+    <button type="button" id="resetButton" class="btn btn-danger">Resetuj tydzień</button>
+  </div>
+
+  <p class="text-muted small-note">
+    Reset archiwizuje bieżące wpisy (nie usuwa historii), dlatego miesięczne podsumowania obejmują całość.
+  </p>
+
+  <!-- lekki komunikat „Zapisano” -->
+  <div id="flash-area" class="d-none"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // >>> Twoja konfiguracja Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAItihAw7npW0lxkoNysM49xzeOXpGAzdg",
       authDomain: "nasze-jaja-100.firebaseapp.com",
@@ -37,278 +142,225 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Elementy DOM
-    const form = document.querySelector('#eggForm');
-    const userSelect = document.querySelector('#user');
-    const eggInput = document.querySelector('#eggs');
-    const messageDiv = document.querySelector('#message');
-    const tableBody = document.querySelector('#entriesBody');
-    const totalsDiv = document.querySelector('#totals');
-
-    // Mapa id→wpis (do edycji)
+    const eggsInput = document.querySelector('#eggs');
+    const tableBody = document.querySelector('#entriesTableBody');
+    const flashArea = document.querySelector('#flash-area');
     let entriesById = {};
 
-    // Funkcje pomocnicze
-    function getWeekStart(date) {
-      const d = new Date(date);
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      return new Date(d.setDate(diff));
-    }
-
-    function formatDate(date) {
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
+    // helpers
+    function formatDate(d){
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
       return `${yyyy}-${mm}-${dd}`;
     }
-
-    // Zwraca nazwę dnia tygodnia w języku polskim dla podanej daty w formacie YYYY-MM-DD
-    function getDayName(dateStr) {
-      const days = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
-      const date = new Date(dateStr);
-      return days[date.getDay()];
+    function getDayName(dateStr){
+      const [y,m,d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      const days = ['Niedz','Pon','Wt','Śr','Czw','Pt','Sob'];
+      return days[dt.getDay()];
+    }
+    function monthNamePLLocative(idx){
+      return ["styczniu","lutym","marcu","kwietniu","maju","czerwcu","lipcu","sierpniu","wrześniu","październiku","listopadzie","grudniu"][idx];
+    }
+    function weekBounds(today = new Date()){
+      const day = today.getDay(); // 0 Sun..6 Sat
+      const diffToMon = (day === 0 ? -6 : 1 - day);
+      const mon = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMon);
+      const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+      return { mon: formatDate(mon), sun: formatDate(sun) };
     }
 
-    async function saveEntry(user, eggs) {
-      const now = new Date();
+    // segmented person (with memory)
+    const LAST_USER_KEY = 'eggapp:lastUser';
+    const personInputs = Array.from(document.querySelectorAll('input[name="person"]'));
+    function setSelectedPerson(name){
+      const input = document.querySelector(`input[name="person"][value="${name}"]`);
+      if (input) input.checked = true;
+    }
+    function getSelectedPerson(){
+      const checked = personInputs.find(i => i.checked);
+      return checked ? checked.value : 'Monika';
+    }
+    // init default or last
+    (function initPerson(){
+      const saved = localStorage.getItem(LAST_USER_KEY);
+      if (saved === 'Monika' || saved === 'Artur') setSelectedPerson(saved);
+      else setSelectedPerson('Monika');
+      personInputs.forEach(i => {
+        i.addEventListener('change', () => {
+          localStorage.setItem(LAST_USER_KEY, getSelectedPerson());
+          eggsInput.focus();
+        });
+      });
+    })();
+
+    // szybkie dodawanie
+    document.querySelectorAll('.quick-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inc = Number(btn.dataset.add) || 0;
+        const cur = Number(eggsInput.value) || 0;
+        eggsInput.value = cur + inc;
+        eggsInput.focus();
+      });
+    });
+    document.querySelector('#clear-eggs').addEventListener('click', () => {
+      eggsInput.value = '';
+      eggsInput.focus();
+    });
+
+    function showFlash(msg, type='success'){
+      flashArea.innerHTML = `<div class="alert alert-${type} shadow-sm py-2 px-3" role="alert">${msg}</div>`;
+      flashArea.classList.remove('d-none');
+      setTimeout(() => flashArea.classList.add('d-none'), 1800);
+    }
+
+    // live data
+    onValue(ref(db, 'entries'), (snapshot) => {
+      const data = snapshot.val() || {};
+      const entries = Object.keys(data).map(id => ({
+        id,
+        user: data[id].user,
+        eggs: Number(data[id].eggs) || 0,
+        date: data[id].date,
+        timestamp: data[id].timestamp || null,
+        archived: !!data[id].archived
+      })).sort((a,b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      updateDisplay(entries);
+    });
+
+    // add
+    document.querySelector('#eggForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = getSelectedPerson();
+      const eggs = Number(eggsInput.value);
+      if (Number.isNaN(eggs) || eggs < 0) return;
+
       const entry = {
-        user: user,
-        eggs: parseInt(eggs, 10),
-        timestamp: now.toISOString(),
-        date: formatDate(now)
+        user, eggs,
+        date: formatDate(new Date()),
+        timestamp: Date.now(),
+        archived: false
       };
       await push(ref(db, 'entries'), entry);
-    }
+      showFlash('Zapisano!');
+      eggsInput.value = '';
+      eggsInput.focus();
+    });
 
-    function updateDisplay(entries) {
+    // render & totals
+    function updateDisplay(entries){
       tableBody.innerHTML = '';
       entriesById = {};
-      const weeklyTotals = {};
-      entries.forEach(entry => {
+      const active = entries.filter(e => !e.archived);
+
+      // table (active only)
+      active.forEach(entry => {
         entriesById[entry.id] = entry;
-        const row = document.createElement('tr');
-        row.innerHTML = `
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
           <td>${getDayName(entry.date)}</td>
           <td>${entry.user}</td>
           <td>${entry.eggs}</td>
           <td>
-            <button data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}" class="edit-btn btn btn-outline-primary me-2">Edytuj</button>
-            <button data-id="${entry.id}" class="delete-btn btn btn-outline-danger">Usuń</button>
-          </td>`;
-        tableBody.appendChild(row);
-        // Sumowanie tygodniowe
-        const weekStart = formatDate(getWeekStart(entry.date));
-        if (!weeklyTotals[weekStart]) weeklyTotals[weekStart] = { Monika: 0, Artur: 0 };
-        weeklyTotals[weekStart][entry.user] += entry.eggs;
+            <button class="btn btn-outline-primary btn-sm me-2 edit-btn" data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}">Edytuj</button>
+            <button class="btn btn-outline-danger btn-sm delete-btn" data-id="${entry.id}">Usuń</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
       });
-      // Podsumowanie bieżącego tygodnia
-      const today = new Date();
-      const currentWeek = formatDate(getWeekStart(today));
-      const totals = weeklyTotals[currentWeek] || { Monika: 0, Artur: 0 };
-      const totalMonika = totals['Monika'] || 0;
-      const totalArtur = totals['Artur'] || 0;
 
-      // Oblicz sumę jaj dzisiaj (łącznie) i w tym tygodniu (łącznie)
+      // Today (active)
+      const todayStr = formatDate(new Date());
       let todayTotal = 0;
-      const todayStr = formatDate(today);
-      entries.forEach(ent => {
-        if (ent.date === todayStr) {
-          todayTotal += ent.eggs;
-        }
+      active.forEach(e => { if (e.date === todayStr) todayTotal += e.eggs; });
+
+      // Bilans since reset (active)
+      let monikaActive = 0, arturActive = 0;
+      active.forEach(e => {
+        if (e.user === 'Monika') monikaActive += e.eggs;
+        if (e.user === 'Artur')  arturActive  += e.eggs;
       });
-      const weekTotal = totalMonika + totalArtur;
-      let summaryHTML = `<p>Podsumowanie tygodniowe (${currentWeek} – ${formatDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())))}):</p>`;
-      summaryHTML += `<p>Monika zebrała <strong>${totalMonika}</strong> jaj.</p>`;
-      summaryHTML += `<p>Artur zebrał <strong>${totalArtur}</strong> jaj.</p>`;
-      // Dodatkowe informacje: dzisiaj i cały tydzień (łączna liczba jaj)
-      summaryHTML += `<p>Dzisiaj: <strong>${todayTotal}</strong> jaj.</p>`;
-      summaryHTML += `<p>W tym tygodniu: <strong>${weekTotal}</strong> jaj.</p>`;
-      const diff = totalMonika - totalArtur;
-      if (today.getDay() === 0) {
-        if (diff > 0) {
-          summaryHTML += `<p><strong>Bilans:</strong> Monika ma oddać ${diff / 2} jaj Arturowi, aby oboje mieli po ${totalMonika - diff / 2} jaj.</p>`;
-        } else if (diff < 0) {
-          summaryHTML += `<p><strong>Bilans:</strong> Artur ma oddać ${Math.abs(diff) / 2} jaj Monice, aby oboje mieli po ${totalArtur - Math.abs(diff) / 2} jaj.</p>`;
-        } else {
-          summaryHTML += `<p><strong>Bilans:</strong> Jesteście na zero. Nie trzeba nic wyrównywać.</p>`;
+      let bilansText = 'Po równo – brak potrzeby wyrównania.';
+      const diff = monikaActive - arturActive;
+      if (diff > 0) bilansText = `Monika powinna oddać Arturowi ${Math.floor(diff/2)} jaj.`;
+      else if (diff < 0) bilansText = `Artur powinien oddać Monice ${Math.floor(Math.abs(diff)/2)} jaj.`;
+
+      // Week (Mon–Sun, active)
+      const { mon, sun } = weekBounds(new Date());
+      let weekTotal = 0;
+      active.forEach(e => { if (e.date >= mon && e.date <= sun) weekTotal += e.eggs; });
+
+      // Month totals (ALL entries: active + archived)
+      const monthTotals = {}; // "YYYY-MM" -> sum
+      entries.forEach(e => {
+        if (!e.date) return;
+        const y = e.date.slice(0,4), m = e.date.slice(5,7);
+        const key = `${y}-${m}`;
+        monthTotals[key] = (monthTotals[key] || 0) + e.eggs;
+      });
+      const now = new Date();
+      const thisKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const thisMonthTotal = monthTotals[thisKey] || 0;
+
+      // Ostatnie 12 pełnych miesięcy (bez bieżącego), pokaż tylko >0
+      const last12Lines = [];
+      for (let k=1; k<=12; k++){
+        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sum = monthTotals[key] || 0;
+        if (sum > 0){
+          last12Lines.push(`W ${monthNamePLLocative(d.getMonth())} ${d.getFullYear()} było: ${sum} jaj.`);
         }
-      } else {
-        // Komunikat o bilansie w niedzielę – na czerwono
-        summaryHTML += `<p class="text-danger">Bilans zostanie obliczony w niedzielę wieczorem.</p>`;
       }
-      totalsDiv.innerHTML = summaryHTML;
+
+      // Summary HTML
+      let summaryHTML = '';
+      summaryHTML += `<p><strong>Dzisiaj:</strong> ${todayTotal} jaj.</p>`;
+      summaryHTML += `<p class="text-danger fw-bold">Bilans: ${bilansText}</p>`;
+      summaryHTML += `<p><strong>W tym tygodniu:</strong> ${weekTotal} jaj.</p>`;
+      summaryHTML += `<p><strong>W tym miesiącu do tej pory:</strong> ${thisMonthTotal} jaj.</p>`;
+      if (last12Lines.length){
+        summaryHTML += `<div class="mt-2">${ last12Lines.map(line => `<div>${line}</div>`).join('') }</div>`;
+      }
+      document.querySelector('#totals').innerHTML = summaryHTML;
     }
 
-    // Nasłuchuj zmiany w bazie
-    onValue(ref(db, 'entries'), snapshot => {
-      const data = snapshot.val() || {};
-      const entries = [];
-      for (const key in data) {
-        entries.push({ id: key, ...data[key] });
-      }
-      entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      updateDisplay(entries);
-    });
+    // edit/delete
+    tableBody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.dataset.id;
 
-    // Obsługa wysyłania formularza
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const user = userSelect.value;
-      const eggs = eggInput.value;
-      if (!eggs) {
-        messageDiv.textContent = 'Proszę podać liczbę jaj.';
-        return;
-      }
-      await saveEntry(user, eggs);
-      messageDiv.textContent = 'Wpis został zapisany!';
-      eggInput.value = '';
-    });
+      if (btn.classList.contains('edit-btn')) {
+        const current = Number(btn.dataset.eggs)||0;
+        const val = prompt('Podaj poprawną liczbę jaj:', String(current));
+        if (val === null) return;
+        const num = Number(val);
+        if (Number.isNaN(num) || num < 0) return alert('Nieprawidłowa liczba.');
+        await update(ref(db, `entries/${id}`), { eggs: num });
 
-    // Delegacja zdarzeń dla przycisków edycji i usuwania
-    tableBody.addEventListener('click', async e => {
-      const target = e.target;
-      const id = target.dataset.id;
-      if (!id) return;
-      if (target.classList.contains('delete-btn')) {
-        const confirmDel = confirm('Czy na pewno chcesz usunąć ten wpis?');
-        if (confirmDel) {
+      } else if (btn.classList.contains('delete-btn')) {
+        if (!confirm('Usunąć ten wpis?')) return;
+        try {
           await remove(ref(db, `entries/${id}`));
+        } catch (err) {
+          alert('Nie udało się usunąć wpisu: ' + (err?.message || err));
         }
-      } else if (target.classList.contains('edit-btn')) {
-        const entry = entriesById[id];
-        if (!entry) return;
-        const newEggsStr = prompt('Podaj nową liczbę jaj:', entry.eggs);
-        if (newEggsStr === null) return;
-        const newEggs = parseInt(newEggsStr, 10);
-        if (isNaN(newEggs)) {
-          alert('Wpisz poprawną liczbę');
-          return;
-        }
-        await update(ref(db, `entries/${id}`), { eggs: newEggs });
       }
     });
 
-    // Obsługa przycisku resetu – usuwa wszystkie wpisy z bazy
+    // reset = archiwizacja WSZYSTKICH aktywnych wpisów
     const resetButton = document.querySelector('#resetButton');
-    if (resetButton) {
-      resetButton.addEventListener('click', async () => {
-        const confirmReset = confirm('Czy na pewno chcesz usunąć wszystkie wpisy?');
-        if (confirmReset) {
-          await remove(ref(db, 'entries'));
-        }
+    resetButton.addEventListener('click', async () => {
+      if (!confirm('Zarchiwizować bieżące wpisy (rozpocząć nowy tydzień)?')) return;
+      const updates = {};
+      Object.keys(entriesById).forEach(id => {
+        if (!entriesById[id].archived) updates[`entries/${id}/archived`] = true;
       });
-    }
+      if (Object.keys(updates).length) await update(ref(db), updates);
+      showFlash('Zarchiwizowano bieżące wpisy');
+    });
   </script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      color: #333;
-      /* Jasne tło oraz delikatny motyw w tle */
-      background-color: #fbfbfb;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
-        url('chicken_banner.png');
-      background-repeat: repeat;
-      background-size: 250px 250px;
-    }
-    /* Własne dopasowania do Bootstrapa */
-    #message {
-      margin-top: 5px;
-    }
-    #totals-card {
-      border: 1px solid #ddd;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Zwiększenie czytelności na telefonie */
-    table.table {
-      font-size: 1.1rem;
-    }
-    .table th, .table td {
-      padding: 0.75rem;
-    }
-
-    /* Pasek nagłówka */
-    #header-bar {
-      /* Jasny gradient i ciemny tekst */
-      background: linear-gradient(90deg, #e8f0fe 0%, #fdfcff 100%);
-      color: #333;
-      border-radius: 0.25rem;
-    }
-
-    /* większe etykiety dla lepszej czytelności */
-    .big-label {
-      font-size: 1.3rem;
-      font-weight: 600;
-    }
-
-    /* większe kontrolki formularza */
-    .big-control {
-      font-size: 1.3rem;
-      padding: 1rem;
-      height: auto;
-    }
-
-    /* bardzo duży przycisk zapisu */
-    .btn-very-large {
-      font-size: 1.2rem;
-      padding: 0.75rem 1.5rem;
-    }
-
-    /* pogrubienie kolumny z liczbą jaj */
-    .table td:nth-child(3) {
-      font-weight: bold;
-    }
-
-    /* mała czcionka dla notatki na dole */
-    .small-note {
-      font-size: 0.75em;
-    }
-  </style>
-</head>
-<body class="container my-4">
-  <!-- Pasek nagłówka z wyśrodkowanym tytułem -->
-  <div id="header-bar" class="py-3 px-4 mb-4">
-    <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
-  </div>
-  <form id="eggForm" class="mb-4">
-    <div class="mb-4">
-      <label for="user" class="form-label big-label">Osoba:</label>
-      <select id="user" class="form-select big-control" required>
-        <option value="Monika">Monika</option>
-        <option value="Artur">Artur</option>
-      </select>
-    </div>
-    <div class="mb-5">
-      <label for="eggs" class="form-label big-label">Liczba zebranych jaj:</label>
-      <input type="number" id="eggs" class="form-control big-control" min="0" required />
-    </div>
-    <button type="submit" class="btn btn-primary btn-very-large">Zapisz</button>
-    <div id="message" class="text-success mt-2"></div>
-  </form>
-  <h2>Wprowadzone wpisy</h2>
-  <table class="table table-striped table-bordered">
-    <thead>
-      <tr>
-        <th>Dzień</th>
-        <th>Osoba</th>
-        <th>Liczba jaj</th>
-        <th>Akcje</th>
-      </tr>
-    </thead>
-    <tbody id="entriesBody">
-      <!-- Wiersze będą generowane dynamicznie -->
-    </tbody>
-  </table>
-  <!-- Sekcja z podsumowaniem opakowana w kartę -->
-  <div id="totals-card" class="card mb-3">
-    <div class="card-body" id="totals"></div>
-  </div>
-  <!-- Przycisk do resetu danych -->
-  <div class="mb-4">
-    <button type="button" id="resetButton" class="btn btn-danger">Resetuj tydzień</button>
-  </div>
-  <p class="text-muted small-note">Możesz edytować lub usuwać wpisy klikając przyciski w kolumnie "Akcje". Zmiany są od razu zapisywane w bazie Firebase.</p>
 </body>
 </html>
