@@ -54,16 +54,28 @@
 
     #flash-area{ position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 1100; }
 
-    /* --- SPLASH pełny ekran --- */
+    /* --- SPLASH pełny ekran z płynnym zanikiem --- */
     #splash{
       position: fixed; inset: 0; background:#000; z-index: 3000;
-      opacity: 1; transition: opacity .35s ease;
+      opacity: 1;
+      transition: opacity 1.1s ease, filter 1.1s ease;
     }
-    #splash.hidden{ opacity: 0; pointer-events: none; }
     #splash video, #splash img{
       position: absolute; inset: 0; width: 100%; height: 100%;
       object-fit: cover;
+      transition: transform 1.1s ease, filter 1.1s ease;
     }
+    /* stan zanikania: delikatne ściemnienie + lekkie powiększenie video */
+    #splash.hidden{
+      opacity: 0;
+      filter: brightness(0.9);
+      pointer-events: none;
+    }
+    #splash.hidden video, #splash.hidden img{
+      transform: scale(1.03);
+      filter: brightness(0.9);
+    }
+    /* UI przycisku dźwięku */
     #splash .splash-ui{
       position: absolute; left: 0; right: 0; bottom: 8%;
       display: flex; justify-content: center;
@@ -82,12 +94,12 @@
     <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
   </div>
 
-  <!-- SPLASH: pełnoekranowe video + dźwięk (2 s) -->
+  <!-- SPLASH: pełnoekranowe video + dźwięk (4 s + fade) -->
   <div id="splash" aria-live="polite">
     <video id="splashVideo" autoplay muted playsinline>
       <source src="chicken_splash.mp4" type="video/mp4">
     </video>
-    <!-- fallback: jeśli video się nie załaduje -->
+    <!-- fallback: jeśli video się nie załaduje (opcjonalny GIF) -->
     <img id="splashImg" class="d-none" src="chicken_splash.gif" alt="Kurzy splash">
 
     <div class="splash-ui">
@@ -167,43 +179,47 @@
 
   <!-- SPLASH: oddzielny, prosty skrypt (nie-moduł), by zawsze zadziałał -->
   <script>
-  (function(){
-    const splash   = document.getElementById('splash');
-    const video    = document.getElementById('splashVideo');
-    const img      = document.getElementById('splashImg');
-    const btnSound = document.getElementById('splashSound');
-    const audio    = document.getElementById('cluckAudio');
+    (function(){
+      const splash   = document.getElementById('splash');
+      const video    = document.getElementById('splashVideo');
+      const img      = document.getElementById('splashImg');
+      const btnSound = document.getElementById('splashSound');
+      const audio    = document.getElementById('cluckAudio');
 
-    const hideSplash = () => {
-      if(!splash) return;
-      splash.classList.add('hidden');
-      setTimeout(()=> splash.remove(), 400);
-    };
+      const hideSplash = () => {
+        if(!splash) return;
+        splash.classList.add('hidden');           // uruchamia 1.1 s fade/scale
+        setTimeout(()=> splash.remove(), 1200);   // usuń po zakończeniu animacji
+      };
 
-    const tryPlay = async () => {
-      if(!audio) return;
-      try { audio.currentTime = 0; await audio.play(); }
-      catch(e){ btnSound && btnSound.classList.remove('d-none'); }
-    };
+      const tryPlay = async () => {
+        if(!audio) return;
+        try { audio.currentTime = 0; await audio.play(); }
+        catch(e){ btnSound && btnSound.classList.remove('d-none'); }
+      };
 
-    video && video.addEventListener('error', ()=>{
-      video.classList.add('d-none');
-      img && img.classList.remove('d-none');
-    });
-    btnSound && btnSound.addEventListener('click', async ()=>{
-      try{ audio.currentTime=0; await audio.play(); btnSound.classList.add('d-none'); }catch(e){}
-    });
-    window.addEventListener('pointerdown', async () => {
-      if(!audio || !audio.paused) return;
-      try{ audio.currentTime=0; await audio.play(); btnSound && btnSound.classList.add('d-none'); }catch(e){}
-    }, { once:true });
+      // fallback na GIF
+      video && video.addEventListener('error', ()=>{
+        video.classList.add('d-none');
+        img && img.classList.remove('d-none');
+      });
 
-    tryPlay();
-    setTimeout(hideSplash, 4000); // ⟵ główny czas: 4 s
-    setTimeout(hideSplash, 6000); // ⟵ failsafe (na wszelki wypadek)
-  })();
-</script>
+      // ręczne uruchomienie dźwięku, jeśli autoplay zablokowany
+      btnSound && btnSound.addEventListener('click', async ()=>{
+        try{ audio.currentTime=0; await audio.play(); btnSound.classList.add('d-none'); }catch(e){}
+      });
 
+      // pierwszy „tap” też próbuje uruchomić dźwięk
+      window.addEventListener('pointerdown', async () => {
+        if(!audio || !audio.paused) return;
+        try{ audio.currentTime=0; await audio.play(); btnSound && btnSound.classList.add('d-none'); }catch(e){}
+      }, { once:true });
+
+      tryPlay();
+      setTimeout(hideSplash, 4000); // 4 s filmu, potem płynny fade
+      setTimeout(hideSplash, 6000); // failsafe – gdyby coś poszło nie tak
+    })();
+  </script>
 
   <!-- Reszta aplikacji (Firebase) w module -->
   <script type="module">
