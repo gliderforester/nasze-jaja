@@ -8,6 +8,7 @@
 
   <style>
     :root{ --card-shadow: 0 2px 6px rgba(0,0,0,.06); }
+
     body{
       font-family: Arial, sans-serif;
       color:#222;
@@ -18,10 +19,12 @@
       background-repeat: repeat;
       background-size: 250px 250px;
     }
+
     #header-bar{
       background: linear-gradient(90deg, #eaf2ff, #ffffff);
       color:#1f2d3d; border:1px solid #e5eefc; border-radius:.75rem; box-shadow: var(--card-shadow);
     }
+
     .big-label{ font-size:1.15rem; font-weight:700; }
     .big-control{ font-size:1.15rem; padding:.9rem 1rem; height:auto; }
     .btn-very-large{ font-size:1.2rem; padding:1rem 1.6rem; }
@@ -43,19 +46,57 @@
     .table td, .table th{ padding:.8rem .9rem; }
     .table thead th{ background:#f2f5ff; border-bottom:2px solid #dee2e6; }
     .table-bordered td, .table-bordered th{ border:1px solid #dee2e6; }
-    .table td:nth-child(3){ font-weight:700; }
+    .table td:nth-child(3){ font-weight:700; } /* liczba jaj pogrubiona */
 
     #totals-card{ border:1px solid #e6e6e6; box-shadow: var(--card-shadow); }
     .small-note{ font-size:.8em; }
     .sticky-summary{ position:sticky; top:8px; z-index:1020; }
 
     #flash-area{ position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 1100; }
+
+    /* --- SPLASH pełny ekran --- */
+    #splash{
+      position: fixed; inset: 0; background:#000; z-index: 3000;
+      opacity: 1; transition: opacity .35s ease;
+    }
+    #splash.hidden{ opacity: 0; pointer-events: none; }
+    #splash video, #splash img{
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    #splash .splash-ui{
+      position: absolute; left: 0; right: 0; bottom: 8%;
+      display: flex; justify-content: center;
+    }
+    #splash #splashSound{
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,.1);
+      padding: .5rem .8rem; border-radius: .6rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body class="container my-4">
 
   <div id="header-bar" class="py-3 px-4 mb-4">
     <h1 class="text-center m-0">Monika &amp; Artur – biznes jajowy</h1>
+  </div>
+
+  <!-- SPLASH: pełnoekranowe video + dźwięk (2 s) -->
+  <div id="splash" aria-live="polite">
+    <video id="splashVideo" autoplay muted playsinline>
+      <source src="chicken_splash.mp4" type="video/mp4">
+    </video>
+    <!-- fallback: jeśli video się nie załaduje -->
+    <img id="splashImg" class="d-none" src="chicken_splash.gif" alt="Kurzy splash">
+
+    <div class="splash-ui">
+      <button id="splashSound" class="btn btn-sm d-none">🔊 Włącz dźwięk</button>
+    </div>
+
+    <audio id="cluckAudio" preload="auto">
+      <source src="cluck.mp3" type="audio/mpeg">
+    </audio>
   </div>
 
   <!-- Formularz -->
@@ -124,11 +165,51 @@
   <!-- lekki komunikat „Zapisano” -->
   <div id="flash-area" class="d-none"></div>
 
+  <!-- SPLASH: oddzielny, prosty skrypt (nie-moduł), by zawsze zadziałał -->
+  <script>
+  (function(){
+    const splash   = document.getElementById('splash');
+    const video    = document.getElementById('splashVideo');
+    const img      = document.getElementById('splashImg');
+    const btnSound = document.getElementById('splashSound');
+    const audio    = document.getElementById('cluckAudio');
+
+    const hideSplash = () => {
+      if(!splash) return;
+      splash.classList.add('hidden');
+      setTimeout(()=> splash.remove(), 400);
+    };
+
+    const tryPlay = async () => {
+      if(!audio) return;
+      try { audio.currentTime = 0; await audio.play(); }
+      catch(e){ btnSound && btnSound.classList.remove('d-none'); }
+    };
+
+    video && video.addEventListener('error', ()=>{
+      video.classList.add('d-none');
+      img && img.classList.remove('d-none');
+    });
+    btnSound && btnSound.addEventListener('click', async ()=>{
+      try{ audio.currentTime=0; await audio.play(); btnSound.classList.add('d-none'); }catch(e){}
+    });
+    window.addEventListener('pointerdown', async () => {
+      if(!audio || !audio.paused) return;
+      try{ audio.currentTime=0; await audio.play(); btnSound && btnSound.classList.add('d-none'); }catch(e){}
+    }, { once:true });
+
+    tryPlay();
+    setTimeout(hideSplash, 4000); // ⟵ główny czas: 4 s
+    setTimeout(hideSplash, 6000); // ⟵ failsafe (na wszelki wypadek)
+  })();
+</script>
+
+
+  <!-- Reszta aplikacji (Firebase) w module -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // >>> Twoja konfiguracja Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAItihAw7npW0lxkoNysM49xzeOXpGAzdg",
       authDomain: "nasze-jaja-100.firebaseapp.com",
@@ -142,222 +223,135 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const eggsInput = document.querySelector('#eggs');
-    const tableBody = document.querySelector('#entriesTableBody');
-    const flashArea = document.querySelector('#flash-area');
+    const eggsInput   = document.querySelector('#eggs');
+    const tableBody   = document.querySelector('#entriesTableBody');
+    const flashArea   = document.querySelector('#flash-area');
+    const personInputs= Array.from(document.querySelectorAll('input[name="person"]'));
     let entriesById = {};
 
-    // helpers
-    function formatDate(d){
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    function getDayName(dateStr){
-      const [y,m,d] = dateStr.split('-').map(Number);
-      const dt = new Date(y, m-1, d);
-      const days = ['Niedz','Pon','Wt','Śr','Czw','Pt','Sob'];
-      return days[dt.getDay()];
-    }
-    function monthNamePLLocative(idx){
-      return ["styczniu","lutym","marcu","kwietniu","maju","czerwcu","lipcu","sierpniu","wrześniu","październiku","listopadzie","grudniu"][idx];
-    }
-    function weekBounds(today = new Date()){
-      const day = today.getDay(); // 0 Sun..6 Sat
-      const diffToMon = (day === 0 ? -6 : 1 - day);
-      const mon = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMon);
-      const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
-      return { mon: formatDate(mon), sun: formatDate(sun) };
-    }
+    function formatDate(d){ const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${yyyy}-${mm}-${dd}`; }
+    function getDayName(dateStr){ const [y,m,d]=dateStr.split('-').map(Number); const dt=new Date(y,m-1,d); return ['Niedz','Pon','Wt','Śr','Czw','Pt','Sob'][dt.getDay()]; }
+    function monthNamePLLocative(idx){ return ["styczniu","lutym","marcu","kwietniu","maju","czerwcu","lipcu","sierpniu","wrześniu","październiku","listopadzie","grudniu"][idx]; }
+    function weekBounds(today=new Date()){ const day=today.getDay(); const diffToMon=(day===0 ? -6 : 1-day); const mon=new Date(today.getFullYear(),today.getMonth(),today.getDate()+diffToMon); const sun=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6); return { mon:formatDate(mon), sun:formatDate(sun) }; }
 
-    // segmented person (with memory)
-    const LAST_USER_KEY = 'eggapp:lastUser';
-    const personInputs = Array.from(document.querySelectorAll('input[name="person"]'));
-    function setSelectedPerson(name){
-      const input = document.querySelector(`input[name="person"][value="${name}"]`);
-      if (input) input.checked = true;
-    }
-    function getSelectedPerson(){
-      const checked = personInputs.find(i => i.checked);
-      return checked ? checked.value : 'Monika';
-    }
-    // init default or last
+    // zapamiętywanie osoby (localStorage)
+    const LAST_USER_KEY='eggapp:lastUser';
+    function setSelectedPerson(name){ const input=document.querySelector(`input[name="person"][value="${name}"]`); if(input) input.checked=true; }
+    function getSelectedPerson(){ const c=personInputs.find(i=>i.checked); return c?c.value:'Monika'; }
     (function initPerson(){
-      const saved = localStorage.getItem(LAST_USER_KEY);
-      if (saved === 'Monika' || saved === 'Artur') setSelectedPerson(saved);
-      else setSelectedPerson('Monika');
-      personInputs.forEach(i => {
-        i.addEventListener('change', () => {
-          localStorage.setItem(LAST_USER_KEY, getSelectedPerson());
-          eggsInput.focus();
-        });
-      });
+      const saved=localStorage.getItem(LAST_USER_KEY);
+      if (saved==='Monika' || saved==='Artur') setSelectedPerson(saved); else setSelectedPerson('Monika');
+      personInputs.forEach(i => i.addEventListener('change', ()=>{ localStorage.setItem(LAST_USER_KEY, getSelectedPerson()); eggsInput.focus(); }));
     })();
 
     // szybkie dodawanie
-    document.querySelectorAll('.quick-add').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const inc = Number(btn.dataset.add) || 0;
-        const cur = Number(eggsInput.value) || 0;
-        eggsInput.value = cur + inc;
-        eggsInput.focus();
-      });
-    });
-    document.querySelector('#clear-eggs').addEventListener('click', () => {
-      eggsInput.value = '';
-      eggsInput.focus();
-    });
+    document.querySelectorAll('.quick-add').forEach(btn => btn.addEventListener('click', ()=>{
+      const inc=Number(btn.dataset.add)||0; const cur=Number(eggsInput.value)||0; eggsInput.value=cur+inc; eggsInput.focus();
+    }));
+    document.querySelector('#clear-eggs').addEventListener('click', ()=>{ eggsInput.value=''; eggsInput.focus(); });
 
     function showFlash(msg, type='success'){
       flashArea.innerHTML = `<div class="alert alert-${type} shadow-sm py-2 px-3" role="alert">${msg}</div>`;
       flashArea.classList.remove('d-none');
-      setTimeout(() => flashArea.classList.add('d-none'), 1800);
+      setTimeout(()=>flashArea.classList.add('d-none'),1800);
     }
 
     // live data
-    onValue(ref(db, 'entries'), (snapshot) => {
+    onValue(ref(db, 'entries'), (snapshot)=>{
       const data = snapshot.val() || {};
-      const entries = Object.keys(data).map(id => ({
-        id,
-        user: data[id].user,
-        eggs: Number(data[id].eggs) || 0,
-        date: data[id].date,
-        timestamp: data[id].timestamp || null,
-        archived: !!data[id].archived
-      })).sort((a,b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      const entries = Object.keys(data).map(id=>({
+        id, user:data[id].user, eggs:Number(data[id].eggs)||0, date:data[id].date,
+        timestamp:data[id].timestamp||null, archived:!!data[id].archived
+      })).sort((a,b)=> (a.date<b.date?-1: a.date>b.date?1:0));
       updateDisplay(entries);
     });
 
     // add
-    document.querySelector('#eggForm').addEventListener('submit', async (e) => {
+    document.querySelector('#eggForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const user = getSelectedPerson();
-      const eggs = Number(eggsInput.value);
-      if (Number.isNaN(eggs) || eggs < 0) return;
-
-      const entry = {
-        user, eggs,
-        date: formatDate(new Date()),
-        timestamp: Date.now(),
-        archived: false
-      };
-      await push(ref(db, 'entries'), entry);
-      showFlash('Zapisano!');
-      eggsInput.value = '';
-      eggsInput.focus();
+      const user=getSelectedPerson();
+      const eggs=Number(eggsInput.value);
+      if (Number.isNaN(eggs) || eggs<0) return;
+      await push(ref(db,'entries'), { user, eggs, date:formatDate(new Date()), timestamp:Date.now(), archived:false });
+      showFlash('Zapisano!'); eggsInput.value=''; eggsInput.focus();
     });
 
     // render & totals
     function updateDisplay(entries){
-      tableBody.innerHTML = '';
-      entriesById = {};
-      const active = entries.filter(e => !e.archived);
+      tableBody.innerHTML=''; entriesById={}; const active=entries.filter(e=>!e.archived);
 
-      // table (active only)
-      active.forEach(entry => {
-        entriesById[entry.id] = entry;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+      active.forEach(entry=>{
+        entriesById[entry.id]=entry;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
           <td>${getDayName(entry.date)}</td>
           <td>${entry.user}</td>
           <td>${entry.eggs}</td>
           <td>
             <button class="btn btn-outline-primary btn-sm me-2 edit-btn" data-id="${entry.id}" data-eggs="${entry.eggs}" data-user="${entry.user}">Edytuj</button>
             <button class="btn btn-outline-danger btn-sm delete-btn" data-id="${entry.id}">Usuń</button>
-          </td>
-        `;
+          </td>`;
         tableBody.appendChild(tr);
       });
 
-      // Today (active)
-      const todayStr = formatDate(new Date());
-      let todayTotal = 0;
-      active.forEach(e => { if (e.date === todayStr) todayTotal += e.eggs; });
+      const todayStr=formatDate(new Date());
+      let todayTotal=0; active.forEach(e=>{ if(e.date===todayStr) todayTotal+=e.eggs; });
 
-      // Bilans since reset (active)
-      let monikaActive = 0, arturActive = 0;
-      active.forEach(e => {
-        if (e.user === 'Monika') monikaActive += e.eggs;
-        if (e.user === 'Artur')  arturActive  += e.eggs;
-      });
-      let bilansText = 'Po równo – brak potrzeby wyrównania.';
-      const diff = monikaActive - arturActive;
-      if (diff > 0) bilansText = `Monika powinna oddać Arturowi ${Math.floor(diff/2)} jaj.`;
-      else if (diff < 0) bilansText = `Artur powinien oddać Monice ${Math.floor(Math.abs(diff)/2)} jaj.`;
+      let monikaActive=0, arturActive=0;
+      active.forEach(e=>{ if(e.user==='Monika') monikaActive+=e.eggs; if(e.user==='Artur') arturActive+=e.eggs; });
+      let bilansText='Po równo – brak potrzeby wyrównania.';
+      const diff=monikaActive-arturActive;
+      if (diff>0) bilansText=`Monika powinna oddać Arturowi ${Math.floor(Math.abs(diff)/2)} jaj.`;
+      else if (diff<0) bilansText=`Artur powinien oddać Monice ${Math.floor(Math.abs(diff)/2)} jaj.`;
 
-      // Week (Mon–Sun, active)
-      const { mon, sun } = weekBounds(new Date());
-      let weekTotal = 0;
-      active.forEach(e => { if (e.date >= mon && e.date <= sun) weekTotal += e.eggs; });
+      const {mon,sun}=weekBounds(new Date());
+      let weekTotal=0; active.forEach(e=>{ if(e.date>=mon && e.date<=sun) weekTotal+=e.eggs; });
 
-      // Month totals (ALL entries: active + archived)
-      const monthTotals = {}; // "YYYY-MM" -> sum
-      entries.forEach(e => {
-        if (!e.date) return;
-        const y = e.date.slice(0,4), m = e.date.slice(5,7);
-        const key = `${y}-${m}`;
-        monthTotals[key] = (monthTotals[key] || 0) + e.eggs;
-      });
-      const now = new Date();
-      const thisKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-      const thisMonthTotal = monthTotals[thisKey] || 0;
+      const monthTotals={}; // "YYYY-MM"->sum (ALL entries: active+archived)
+      entries.forEach(e=>{ if(!e.date) return; const y=e.date.slice(0,4), m=e.date.slice(5,7); const key=`${y}-${m}`; monthTotals[key]=(monthTotals[key]||0)+e.eggs; });
+      const now=new Date();
+      const thisKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const thisMonthTotal=monthTotals[thisKey]||0;
 
-      // Ostatnie 12 pełnych miesięcy (bez bieżącego), pokaż tylko >0
-      const last12Lines = [];
-      for (let k=1; k<=12; k++){
-        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const sum = monthTotals[key] || 0;
-        if (sum > 0){
-          last12Lines.push(`W ${monthNamePLLocative(d.getMonth())} ${d.getFullYear()} było: ${sum} jaj.`);
-        }
+      const last12Lines=[];
+      for(let k=1;k<=12;k++){
+        const d=new Date(now.getFullYear(), now.getMonth()-k, 1);
+        const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sum=monthTotals[key]||0;
+        if (sum>0) last12Lines.push(`W ${monthNamePLLocative(d.getMonth())} ${d.getFullYear()} było: ${sum} jaj.`);
       }
 
-      // Summary HTML
-      let summaryHTML = '';
-      summaryHTML += `<p><strong>Dzisiaj:</strong> ${todayTotal} jaj.</p>`;
-      summaryHTML += `<p class="text-danger fw-bold">Bilans: ${bilansText}</p>`;
-      summaryHTML += `<p><strong>W tym tygodniu:</strong> ${weekTotal} jaj.</p>`;
-      summaryHTML += `<p><strong>W tym miesiącu do tej pory:</strong> ${thisMonthTotal} jaj.</p>`;
-      if (last12Lines.length){
-        summaryHTML += `<div class="mt-2">${ last12Lines.map(line => `<div>${line}</div>`).join('') }</div>`;
-      }
-      document.querySelector('#totals').innerHTML = summaryHTML;
+      let summaryHTML='';
+      summaryHTML+=`<p><strong>Dzisiaj:</strong> ${todayTotal} jaj.</p>`;
+      summaryHTML+=`<p class="text-danger fw-bold">Bilans: ${bilansText}</p>`;
+      summaryHTML+=`<p><strong>W tym tygodniu:</strong> ${weekTotal} jaj.</p>`;
+      summaryHTML+=`<p><strong>W tym miesiącu do tej pory:</strong> ${thisMonthTotal} jaj.</p>`;
+      if (last12Lines.length){ summaryHTML+=`<div class="mt-2">${ last12Lines.map(l=>`<div>${l}</div>`).join('') }</div>`; }
+      document.querySelector('#totals').innerHTML=summaryHTML;
     }
 
     // edit/delete
-    tableBody.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      const id = btn.dataset.id;
-
-      if (btn.classList.contains('edit-btn')) {
-        const current = Number(btn.dataset.eggs)||0;
-        const val = prompt('Podaj poprawną liczbę jaj:', String(current));
-        if (val === null) return;
-        const num = Number(val);
-        if (Number.isNaN(num) || num < 0) return alert('Nieprawidłowa liczba.');
-        await update(ref(db, `entries/${id}`), { eggs: num });
-
-      } else if (btn.classList.contains('delete-btn')) {
+    tableBody.addEventListener('click', async (e)=>{
+      const btn=e.target.closest('button'); if(!btn) return; const id=btn.dataset.id;
+      if (btn.classList.contains('edit-btn')){
+        const current=Number(btn.dataset.eggs)||0;
+        const val=prompt('Podaj poprawną liczbę jaj:', String(current));
+        if (val===null) return; const num=Number(val);
+        if (Number.isNaN(num) || num<0) return alert('Nieprawidłowa liczba.');
+        await update(ref(db, `entries/${id}`), { eggs:num });
+      } else if (btn.classList.contains('delete-btn')){
         if (!confirm('Usunąć ten wpis?')) return;
-        try {
-          await remove(ref(db, `entries/${id}`));
-        } catch (err) {
-          alert('Nie udało się usunąć wpisu: ' + (err?.message || err));
-        }
+        try{ await remove(ref(db, `entries/${id}`)); }
+        catch(err){ alert('Nie udało się usunąć wpisu: ' + (err?.message || err)); }
       }
     });
 
-    // reset = archiwizacja WSZYSTKICH aktywnych wpisów
-    const resetButton = document.querySelector('#resetButton');
-    resetButton.addEventListener('click', async () => {
+    // reset = archiwizacja aktywnych
+    const resetButton=document.querySelector('#resetButton');
+    resetButton.addEventListener('click', async ()=>{
       if (!confirm('Zarchiwizować bieżące wpisy (rozpocząć nowy tydzień)?')) return;
-      const updates = {};
-      Object.keys(entriesById).forEach(id => {
-        if (!entriesById[id].archived) updates[`entries/${id}/archived`] = true;
-      });
+      const updates={};
+      Object.keys(entriesById).forEach(id=>{ if(!entriesById[id].archived) updates[`entries/${id}/archived`]=true; });
       if (Object.keys(updates).length) await update(ref(db), updates);
       showFlash('Zarchiwizowano bieżące wpisy');
     });
